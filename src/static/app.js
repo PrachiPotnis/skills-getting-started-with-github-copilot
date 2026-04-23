@@ -20,11 +20,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        const participantsHtml = details.participants.length
+          ? `<div class="activity-participants">
+              <h5>Participants</h5>
+              <ul class="participants-list">
+                ${details.participants.map((participant) => `
+                  <li class="participant-item">
+                    <span class="participant-name">${participant}</span>
+                    <button class="delete-btn" data-activity="${name}" data-email="${participant}" aria-label="Delete ${participant}">
+                      <span class="delete-icon">✕</span>
+                    </button>
+                  </li>
+                `).join("")}
+              </ul>
+            </div>`
+          : `<div class="activity-participants no-participants">
+              <h5>Participants</h5>
+              <p>No participants yet</p>
+            </div>`;
+
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          ${participantsHtml}
         `;
 
         activitiesList.appendChild(activityCard);
@@ -78,6 +98,37 @@ document.addEventListener("DOMContentLoaded", () => {
       messageDiv.className = "error";
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
+    }
+  });
+
+  // Handle participant deletion
+  document.addEventListener("click", async (event) => {
+    if (event.target.closest(".delete-btn")) {
+      const button = event.target.closest(".delete-btn");
+      const activity = button.getAttribute("data-activity");
+      const email = button.getAttribute("data-email");
+
+      if (confirm(`Remove ${email} from ${activity}?`)) {
+        try {
+          const response = await fetch(
+            `/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`,
+            {
+              method: "DELETE",
+            }
+          );
+
+          if (response.ok) {
+            // Refresh the activities list
+            fetchActivities();
+          } else {
+            const result = await response.json();
+            alert(result.detail || "Failed to remove participant");
+          }
+        } catch (error) {
+          alert("Failed to remove participant. Please try again.");
+          console.error("Error removing participant:", error);
+        }
+      }
     }
   });
 
